@@ -1,0 +1,44 @@
+version: '3.8'
+
+
+networks:
+  mutante-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+
+services:
+  springboot-app:
+    image: peperinodocker/mutante-springboot:1.0    
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_USER_PASSWORD}
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - mutante-network
+
+  mysql-db:
+    image: peperinodocker/mysql-db:1.1    
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_USER_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mutante-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 3s
